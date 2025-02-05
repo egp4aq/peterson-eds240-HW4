@@ -1,0 +1,101 @@
+---
+title: "HW2-exploration"
+author: "Liz Peterson"
+date: 2025-02-04
+format: 
+  html:
+    embed-resources: true
+editor_options: 
+  chunk_output_type: console
+warning: FALSE
+message: FALSE
+---
+
+### Set up
+
+```{r}
+#| eval: true
+#| echo: true
+# Load libraries
+library(dplyr)
+library(janitor)
+library(ggplot2)
+library(here)
+library(tmap)
+library(sf)
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Read in and clean data
+df <- read.csv('data/mammal_hvy_metals_by_pop_withGUIDs.csv') %>%
+  clean_names() %>%
+  filter(!is.na(latitude) & !is.na(longitude))
+# add in more data cleaning post mortem, once I understand what variables I am interested in
+```
+
+```{r}
+#| eval: false
+#| echo: false
+unique(df)
+```
+
+### Visualizations
+
+```{r}
+#| eval: true
+#| echo: true
+# First data viz -> collections over time
+ggplot(df, aes(x = year_collected, y = mg)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    title = "Magnesium levels over time",
+    x = "Year",
+    y = "Mg Level"
+  )
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Second data viz -> use sf object to plot lat and long
+# convert to sf object so we can use tmap
+df_sf <- st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+tm_shape(df_sf) +
+  tm_dots()
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Third data viz -> sum magnesium levels by county
+mg_df <- df %>%
+  group_by(county) %>%
+  mutate(total_mg = sum(mg))
+
+ggplot(mg_df, aes(x = county, y = total_mg)) +
+  geom_point() +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Magnesium levels by county (in Minnesota)",
+    x = "County",
+    y = "Total Mg"
+  )
+```
+
+### Questions
+
+1. What have you learned about your data? Have any potentially interesting patterns emerged?
+
+Through my initial visualizations, I have learned that there does seem to be a slight upward trend in magnesium levels throughout Minnesota as time moves on. I am curious to see this trend also arises for other metals, and how this differs spatially. I am not sure what my spatial analysis is going to look like, but I do certainly want to dig into that for this project. 
+
+2. In HW #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)?
+
+The question that I am most interested in answering is whether or not the proximity to ore mining sites correlates to mining content. I made a very preliminary spatial visualization of the data, but in order to answer this question, it seems like my next step will be identifying those sites that I want to investigate. 
+
+3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
+
+I foresee some troubles if I need to join this data to other location data, but I'm not sure I will need to if I just do some digging on my own and manually add in the data with the location of the mines. Other than that, the data seems quite robust, besides some missing data. I don't yet know how I want to utilize the time range for my visualizations. 

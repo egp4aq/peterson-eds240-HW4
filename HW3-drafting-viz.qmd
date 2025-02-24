@@ -1,0 +1,133 @@
+---
+title: "HW3-drafting-viz"
+format: 
+  html:
+    embed-resources: true
+editor_options: 
+  chunk_output_type: console
+---
+
+#### 1: Which option do you plan to pursue? 
+
+#### 2: Restate your questions. Has this changed at all since HW #1? If yes, how so?
+
+#### 3: Explain which variables from your data set(s) you will use to answer your question(s), and how.
+
+#### 4: Find at least two data viz that you could (potentially) borrow / adapt pieces from. 
+
+#### 5: Hand drawn visualizations
+
+#### 6: Mock up visualizations
+
+#### 7: a. What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R? If you struggled with mocking up any of your three visualizations (from #6, above), describe those challenges here.
+
+#### b. What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven’t covered in class that you’ll be learning how to use for your visualizations?
+
+#### c. What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
+
+### Set up
+
+```{r}
+#| eval: true
+#| echo: true
+# Load libraries
+library(dplyr)
+library(janitor)
+library(ggplot2)
+library(here)
+library(tmap)
+library(sf)
+library(hrbrthemes)
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Read in and clean data
+df <- read.csv('data/mammal_hvy_metals_by_pop_withGUIDs.csv') %>%
+  clean_names() %>%
+  filter(!is.na(latitude) & !is.na(longitude))
+# add in more data cleaning post mortem, once I understand what variables I am interested in
+```
+
+This dataset makes use of the University of Minnesota's Bell Museum of Natural History collection examining specimens of four mammal species (a mouse, shrew, bat and squirrel) to ask how tissue metal content has changed over a 94-year time period (1911-2005), and implications for measures of individual performance (body size and cranial capacity). The metal content of organisms is often elevated closer to cities, so these specimens were examined for spatial variation in metal exposure based on their proximity to human populations and the size of those populated areas at the time of collection. Analysis of mammal tissues focused on six heavy metals associated with human activity (Pb, Cd, Zn, Cu, Cr, Ni, Mn), to address whether these anthropogenic metal pollutants vary in concert with human activity.
+
+```{r}
+#| eval: false
+#| echo: false
+unique(df)
+```
+
+### Visualizations
+
+```{r}
+#| eval: true
+#| echo: true
+# First data viz -> collections over time
+df %>%
+  mutate(mg_prop = mg/total_length) %>%
+  ggplot(aes(x = year_collected, y = mg_prop)) +
+  geom_area(fill = "#e0e1dd") +
+  geom_line(color = "#bde0fe") +
+  theme_minimal() +
+  labs(
+    title = "Magnesium levels in mammal tissue over time",
+    subtitle = "Mg level (ppm) is proportioned to animal size using length (mm)",
+    x = "Year",
+    y = "Mg Level",
+    caption = "Data Source: Environmental Data Initiative (EDI), published May 28, 2024. \nCreators come from the University of Minnesota and The Minneapolis-St. Paul Long Term Ecological Research") +
+  theme_ipsum() +
+  theme(axis.title.x = element_blank())
+# the average content of Mg in the body of most animals is about 0.4 Mg / kg of body weight
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Second data viz -> use sf object to plot lat and long
+# convert to sf object so we can use tmap
+df_sf <- st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+tm_shape(df_sf) +
+  tm_dots()
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Third data viz -> sum magnesium levels by county
+mg_df <- df %>%
+  group_by(county) %>%
+  mutate(total_mg = sum(mg)) %>%
+  arrange(total_mg) %>%
+  ungroup() %>%
+  mutate(county = factor(county, levels = unique(county)))
+
+ggplot(mg_df, aes(x = county, y = total_mg)) +
+  geom_point() +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Magnesium levels (in mammal tissue) by county",
+    y = "Total Mg"
+  )
+```
+
+```{r}
+#| eval: true
+#| echo: true
+# Third data viz -> sum magnesium levels by county
+mg_df <- df %>%
+  group_by(county) %>%
+  mutate(total_mg = sum(mg)) %>%
+  mutate(mg_prop = mg/total_length) %>%
+  ungroup()
+
+ggplot(mg_df, aes(x = county, y = mg_prop)) +
+  geom_point() +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Magnesium levels in mammal tissue proportional to animal length",
+    y = "Mg level / total length"
+  )
+```
